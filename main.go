@@ -15,18 +15,19 @@ const (
 )
 
 const (
-	glossPink = lipgloss.Color("#FF06B7")
-	neon      = lipgloss.Color("#06c5ffff")
+	glossPink = lipgloss.Color("201")
+	neon      = lipgloss.Color("86")
 )
 
 var (
 	inputStyle   = lipgloss.NewStyle().Foreground(glossPink)
-	headingStyle = lipgloss.NewStyle().Bold(true).Foreground(neon).Underline(true).Width(19).Align(lipgloss.Center)
+	headingStyle = lipgloss.NewStyle().Bold(true).Foreground(neon)
 )
 
 type login struct {
 	inputs  []textinput.Model
 	focused int
+	width   int
 	err     error
 }
 
@@ -45,8 +46,8 @@ func (m login) Init() tea.Cmd {
 func initialModel() login {
 	var inputs []textinput.Model = make([]textinput.Model, 2)
 	inputs[username] = textinput.New()
-	inputs[username].Width = 30
 	inputs[username].Focus()
+	inputs[username].Width = 30
 
 	inputs[password] = textinput.New()
 	inputs[password].Width = 30
@@ -60,11 +61,13 @@ func initialModel() login {
 
 func (m login) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(m.inputs))
-	fmt.Printf("%v", tea.WindowSize())
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
 	case tea.KeyMsg:
 		switch msg.Type {
+
 		case tea.KeyEnter:
 			if m.focused == len(m.inputs)-1 {
 				return m, tea.Quit
@@ -94,15 +97,27 @@ func (m login) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m login) View() string {
 	return fmt.Sprintf(`%s
-	%s %s
-
-	%s %s
-	
+			---------------------------------------------
+			| %s %s|
+			---------------------------------------------
+			| %s %s|
+			---------------------------------------------
 	`,
-		headingStyle.Render("Welcome to spctl"),
-		inputStyle.Width(0).Render("Username"),
+		headingStyle.Width(m.width).Align(lipgloss.Center).Render(`
+
+
+                _   _
+ ___ _ __   ___| |_| |
+/ __| '_ \ / __| __| |
+\__ \ |_) | (__| |_| |
+|___/ .__/ \___|\__|_|
+    |_|               
+
+
+`),
+		inputStyle.Render("Username"),
 		m.inputs[username].View(),
-		inputStyle.Width(0).Render("Password"),
+		inputStyle.Render("Password"),
 		m.inputs[password].View()) + "\n"
 }
 
