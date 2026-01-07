@@ -2,8 +2,6 @@ package ui
 
 import tea "github.com/charmbracelet/bubbletea"
 
-type sessionState int
-
 const (
 	loginView sessionState = iota
 	playlistView
