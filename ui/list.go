@@ -35,13 +35,23 @@ type ListSong struct {
 	list list.Model
 }
 
-func (l *ListSong) initLists(listWidth, listHeight int) {
+func (l *ListSong) initQueue(listWidth, listHeight int) {
+	l.list = list.New([]list.Item{}, list.NewDefaultDelegate(), listWidth, listHeight)
+
+	l.list.Title = "Queue"
+	l.list.SetItems([]list.Item{
+		Song{title: "Something", artist: "me", duration: 120},
+		Song{title: "Something else", artist: "me again", duration: 100},
+	})
+}
+
+func (l *ListSong) initPlaylist(listWidth, listHeight int) {
 	l.list = list.New([]list.Item{}, list.NewDefaultDelegate(), listWidth, listHeight)
 
 	l.list.Title = "Playlist"
 	l.list.SetItems([]list.Item{
-		Song{title: "Something", artist: "me", duration: 120},
-		Song{title: "Something else", artist: "me again", duration: 100},
+		Song{title: "Playlist1", artist: "me", duration: 120},
+		Song{title: "Playlist2", artist: "me again", duration: 100},
 	})
 }
 
