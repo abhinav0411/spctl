@@ -36,8 +36,8 @@ func (m ScreenModel) Init() tea.Cmd {
 }
 
 func NewScreen() ScreenModel {
-	var songList ListSong
-	songList.initLists(listWidth, listHeight)
+	var songList List
+	songList.initPlaylist(listWidth, listHeight)
 
 	return ScreenModel{
 		state: search,

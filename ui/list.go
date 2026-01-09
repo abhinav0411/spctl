@@ -31,11 +31,11 @@ func (s Song) Duration() int {
 
 /* Now creating the list.model which we will use in view.go for playlists, queue */
 
-type ListSong struct {
+type List struct {
 	list list.Model
 }
 
-func (l *ListSong) initQueue(listWidth, listHeight int) {
+func (l *List) initQueue(listWidth, listHeight int) {
 	l.list = list.New([]list.Item{}, list.NewDefaultDelegate(), listWidth, listHeight)
 
 	l.list.Title = "Queue"
@@ -45,7 +45,7 @@ func (l *ListSong) initQueue(listWidth, listHeight int) {
 	})
 }
 
-func (l *ListSong) initPlaylist(listWidth, listHeight int) {
+func (l *List) initPlaylist(listWidth, listHeight int) {
 	l.list = list.New([]list.Item{}, list.NewDefaultDelegate(), listWidth, listHeight)
 
 	l.list.Title = "Playlist"
@@ -55,6 +55,6 @@ func (l *ListSong) initPlaylist(listWidth, listHeight int) {
 	})
 }
 
-func (l ListSong) View() string {
+func (l List) View() string {
 	return l.list.View()
 }
