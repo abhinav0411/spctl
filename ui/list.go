@@ -2,7 +2,7 @@ package ui
 
 import "github.com/charmbracelet/bubbles/list"
 
-/* Implementing the list.Item interface for songs */
+/* Implementing the list.Item interface for Songs */
 type Song struct {
 	title    string
 	artist   string
@@ -29,12 +29,36 @@ func (s Song) Duration() int {
 	return s.duration
 }
 
+/* Implementing list.Item interface for Playlists */
+
+type Playlist struct {
+	name       string
+	totalSongs int
+}
+
+func (p Playlist) FilterValue() string {
+	return p.name
+}
+
+func (p Playlist) Description() string {
+	return p.name
+}
+
+func (p Playlist) Name() string {
+	return p.name
+}
+
+func (p Playlist) TotalSongs() int {
+	return p.totalSongs
+}
+
 /* Now creating the list.model which we will use in view.go for playlists, queue */
 
 type List struct {
 	list list.Model
 }
 
+/* Function for Queue */
 func (l *List) initQueue(listWidth, listHeight int) {
 	l.list = list.New([]list.Item{}, list.NewDefaultDelegate(), listWidth, listHeight)
 
@@ -45,13 +69,14 @@ func (l *List) initQueue(listWidth, listHeight int) {
 	})
 }
 
+/* Function for Playlist */
 func (l *List) initPlaylist(listWidth, listHeight int) {
 	l.list = list.New([]list.Item{}, list.NewDefaultDelegate(), listWidth, listHeight)
 
 	l.list.Title = "Playlist"
 	l.list.SetItems([]list.Item{
-		Song{title: "Playlist1", artist: "me", duration: 120},
-		Song{title: "Playlist2", artist: "me again", duration: 100},
+		Playlist{name: "Playlist1", totalSongs: 3},
+		Playlist{name: "Playlist2", totalSongs: 2},
 	})
 }
 

@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type sessionState int
@@ -23,8 +24,8 @@ type ScreenModel struct {
 	state sessionState
 
 	Searchbar textinput.Model
-	Playlist  ListSong
-	Queue     ListSong
+	Playlist  List
+	Queue     List
 
 	progress progress.Model
 
@@ -36,12 +37,14 @@ func (m ScreenModel) Init() tea.Cmd {
 }
 
 func NewScreen() ScreenModel {
-	var songList List
-	songList.initPlaylist(listWidth, listHeight)
+	var playList, queueList List
+	playList.initPlaylist(listWidth, listHeight)
+	queueList.initQueue(listWidth, listHeight)
 
 	return ScreenModel{
-		state: search,
-		Queue: songList,
+		state:    search,
+		Queue:    queueList,
+		Playlist: playList,
 	}
 }
 
@@ -58,5 +61,5 @@ func (m ScreenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ScreenModel) View() string {
-	return m.Queue.View()
+	return lipgloss.JoinHorizontal(lipgloss.Left, m.Queue.View(), m.Playlist.View())
 }
