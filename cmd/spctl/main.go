@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
-	spotify.Login()
+	code_verifier, code := spotify.Login()
+	spotify.RequestAccessToken(code_verifier, code)
 	fmt.Println("Hope this works")
 }

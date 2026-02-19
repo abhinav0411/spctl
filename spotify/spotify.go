@@ -1,5 +1,0 @@
-package spotify
-
-func getUser() {
-	
-}
