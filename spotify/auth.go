@@ -18,6 +18,7 @@ func GenerateRandomString() string {
 }
 
 func CreateConf() *oauth2.Config {
+
 	conf := &oauth2.Config{
 		ClientID:     os.Getenv("CLIENT_ID"),
 		ClientSecret: os.Getenv("CLIENT_SECRET"),
@@ -30,6 +31,7 @@ func CreateConf() *oauth2.Config {
 }
 
 func Login() (string, string) {
+
 	verifier := GenerateRandomString()
 
 	var conf = CreateConf()
