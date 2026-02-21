@@ -14,6 +14,6 @@ func main() {
 		log.Println("No .env file found")
 	}
 	code_verifier, code := spotify.Login()
-	spotify.RequestAccessToken(code_verifier, code)
+	spotify.RequestToken(code_verifier, code)
 	fmt.Println("Hope this works")
 }

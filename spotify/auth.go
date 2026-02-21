@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/abhinav0411/spctl/models"
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
@@ -20,8 +22,7 @@ func GenerateRandomString() string {
 func CreateConf() *oauth2.Config {
 
 	conf := &oauth2.Config{
-		ClientID:     os.Getenv("CLIENT_ID"),
-		ClientSecret: os.Getenv("CLIENT_SECRET"),
+		ClientID: os.Getenv("CLIENT_ID"),
 		Endpoint: oauth2.Endpoint{
 			AuthURL: "https://accounts.spotify.com/authorize",
 		},
@@ -46,8 +47,7 @@ func Login() (string, string) {
 	return verifier, code
 }
 
-func RequestAccessToken(code_verifier string, code string) {
-	fmt.Println("hesjkdf")
+func RequestToken(code_verifier string, code string) {
 	RedirectURL := os.Getenv("REDIRECT_URL")
 	ClientID := os.Getenv("CLIENT_ID")
 
@@ -85,5 +85,32 @@ func RequestAccessToken(code_verifier string, code string) {
 		os.Exit(1)
 	}
 
-	fmt.Println("Response: ", string(resBody))
+	// Creating the directory and the json file
+	path := Createdir()
+	fmt.Println(string(resBody))
+
+	var new_session models.Session
+	json.Unmarshal(resBody, &new_session)
+
+	new_session.Save(path)
+
+	fmt.Println("Saved")
+
+}
+
+func Createdir() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Println("Error while getting the config dir")
+		os.Exit(1)
+	}
+
+	path := dir + "/" + "spctl"
+	err = os.Mkdir(path, 0o777)
+
+	if err != nil {
+		fmt.Println("Error while creating the dir")
+		os.Exit(1)
+	}
+	return path
 }
