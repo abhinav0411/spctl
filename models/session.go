@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 )
 
 type Session struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	ExpTime      time.Time `json:"expires_in"`
-	TokenType    string    `json:"token_type"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpTime      int    `json:"expires_in"`
+	TokenType    string `json:"token_type"`
 }
 
 func (s Session) Save(path string) {
@@ -27,8 +26,8 @@ func (s Session) Save(path string) {
 	}
 }
 
-func (s Session) Load(path string) Session {
-	file, err := os.ReadFile(path)
+func Load(path string) Session {
+	file, err := os.ReadFile(path + "/auth.json")
 	if err != nil {
 		fmt.Println("Error while opening the file")
 		os.Exit(1)

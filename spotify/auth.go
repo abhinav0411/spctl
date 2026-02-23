@@ -43,7 +43,6 @@ func Login() (string, string) {
 	browser.OpenURL(url)
 
 	code := <-AuthCodeChan
-	fmt.Println("Code: ", code)
 	return verifier, code
 }
 
@@ -87,15 +86,15 @@ func RequestToken(code_verifier string, code string) {
 
 	// Creating the directory and the json file
 	path := Createdir()
-	fmt.Println(string(resBody))
 
 	var new_session models.Session
 	json.Unmarshal(resBody, &new_session)
 
 	new_session.Save(path)
 
-	fmt.Println("Saved")
-
+	var return_session models.Session
+	return_session = models.Load(path)
+	fmt.Println(return_session)
 }
 
 func Createdir() string {
