@@ -29,7 +29,7 @@ func (s Session) Save(path string) {
 func Load(path string) Session {
 	file, err := os.ReadFile(path + "/auth.json")
 	if err != nil {
-		fmt.Println("Error while opening the file")
+		fmt.Println("Error while opening the file", err)
 		os.Exit(1)
 	}
 	var new_session Session

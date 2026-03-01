@@ -91,10 +91,6 @@ func RequestToken(code_verifier string, code string) {
 	json.Unmarshal(resBody, &new_session)
 
 	new_session.Save(path)
-
-	var return_session models.Session
-	return_session = models.Load(path)
-	fmt.Println(return_session)
 }
 
 func Createdir() string {
