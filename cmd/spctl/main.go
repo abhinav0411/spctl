@@ -29,9 +29,13 @@ func main() {
 		HTTPClient: &new_http_client,
 	}
 
-	new_user := spotify.GetUser(&new_client)
+	var song models.Song
 
-	fmt.Println(new_user)
+	song.ContextURI = "spotify:track:66nBMj6cwE9V6LxcpQQpFs"
+	song.OffSet.Position = 0
+	song.OffSet.PositionMs = 0
+
+	spotify.StartResume(&new_client, &song)
 
 	fmt.Println("Hope this works")
 }
