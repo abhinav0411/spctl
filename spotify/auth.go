@@ -20,13 +20,14 @@ func GenerateRandomString() string {
 }
 
 func CreateConf() *oauth2.Config {
-
+	scope_list := []string{"user-read-playback-state", "user-modify-playback-state", "user-read-currently-playing", "streaming", "playlist-read-private", "user-follow-read", "user-read-playback-position", "user-top-read", "user-read-recently-played", "user-library-read", "user-read-private"}
 	conf := &oauth2.Config{
 		ClientID: os.Getenv("CLIENT_ID"),
 		Endpoint: oauth2.Endpoint{
 			AuthURL: "https://accounts.spotify.com/authorize",
 		},
 		RedirectURL: os.Getenv("REDIRECT_URL"),
+		Scopes:      scope_list,
 	}
 	return conf
 }

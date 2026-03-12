@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/abhinav0411/spctl/models"
 )
@@ -12,11 +14,26 @@ import (
 func StartResume(c *models.Client, song *models.Song) {
 	songJSON, err := json.Marshal(song)
 
-	var songDetail string
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	json.Unmarshal(songJSON, &songDetail)
-	const url = "https://api.spotify.com/v1/me/player/play"
-	req, err := http.NewRequest("PUT", url, nil)
+	var device []models.PlayerDevice
+	device, err = GetDevice(c)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	device_id := device[0].ID
+	fmt.Println(device)
+
+	params := url.Values{}
+	params.Set("device_id", device_id)
+	fmt.Println(device_id)
+
+	reader := strings.NewReader(string(songJSON))
+	url := "https://api.spotify.com/v1/me/player/play?" + params.Encode()
+	req, err := http.NewRequest("PUT", url, reader)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,5 +45,5 @@ func StartResume(c *models.Client, song *models.Song) {
 
 	res, err := c.HTTPClient.Do(req)
 
-	fmt.Println(res.StatusCode, res)
+	fmt.Println(res.StatusCode)
 }

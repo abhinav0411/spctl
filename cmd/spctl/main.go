@@ -31,9 +31,9 @@ func main() {
 
 	var song models.Song
 
-	song.ContextURI = "spotify:track:66nBMj6cwE9V6LxcpQQpFs"
-	song.OffSet.Position = 0
-	song.OffSet.PositionMs = 0
+	song.ContextURI = "spotify:album:5ht7ItJgpBH7W6vJ5BqpPr"
+	song.OffSet.Position = 5
+	song.PositionMs = 0
 
 	spotify.StartResume(&new_client, &song)
 
