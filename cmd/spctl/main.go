@@ -29,13 +29,17 @@ func main() {
 		HTTPClient: &new_http_client,
 	}
 
-	var song models.Song
+	// var song models.Song
 
-	song.ContextURI = "spotify:album:5ht7ItJgpBH7W6vJ5BqpPr"
-	song.OffSet.Position = 5
-	song.PositionMs = 0
+	// song.ContextURI = "spotify:album:5ht7ItJgpBH7W6vJ5BqpPr"
+	// song.OffSet.Position = 5
+	// song.PositionMs = 0
 
-	spotify.StartResume(&new_client, &song)
+	// spotify.StartResume(&new_client, &song)
+
+	var search models.SearchResult
+	search = spotify.Search(&new_client)
+	fmt.Print(search)
 
 	fmt.Println("Hope this works")
 }
