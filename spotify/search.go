@@ -10,13 +10,13 @@ import (
 	"github.com/abhinav0411/spctl/models"
 )
 
-func Search(c *models.Client) models.SearchResult {
+func Search(c *models.Client, search_type string) models.SearchResult {
 	url_ := "https://api.spotify.com/v1/search?"
 
 	var searchResult models.SearchResult
 
 	params := url.Values{}
-	params.Add("type", "album")
+	params.Add("type", search_type)
 	params.Add("q", "DAMN")
 
 	new_url := url_ + params.Encode()

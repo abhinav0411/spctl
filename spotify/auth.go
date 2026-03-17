@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,6 +31,27 @@ func CreateConf() *oauth2.Config {
 		Scopes:      scope_list,
 	}
 	return conf
+}
+
+func Createdir() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Println("Error while getting the config dir")
+		os.Exit(1)
+	}
+
+	path := dir + "/" + "spctl"
+	_, err = os.Stat(path)
+	if err == nil {
+		return path
+	}
+	err = os.Mkdir(path, 0o777)
+
+	if err != nil {
+		fmt.Println("Error while creating the dir")
+		os.Exit(1)
+	}
+	return path
 }
 
 func Login() (string, string) {
@@ -64,7 +86,7 @@ func RequestToken(code_verifier string, code string) {
 
 	url := "https://accounts.spotify.com/api/token"
 
-	req, err := http.NewRequest(http.MethodPost, url, reader)
+	req, err := http.NewRequest("POST", url, reader)
 	if err != nil {
 		fmt.Println("Error in req")
 		os.Exit(1)
@@ -94,7 +116,45 @@ func RequestToken(code_verifier string, code string) {
 	new_session.Save(path)
 }
 
-func Createdir() string {
+func NewAccessToken(c *models.Client, session *models.Session) {
+	refresh_token := c.Session.RefreshToken
+	client_id := os.Getenv("CLIENT_ID")
+
+	url_ := "https://accounts.spotify.com/api/token"
+
+	bodyParams := url.Values{}
+	bodyParams.Set("client_id", client_id)
+	bodyParams.Set("grant_type", "refresh_token")
+	bodyParams.Set("refresh_token", refresh_token)
+
+	body := bodyParams.Encode()
+	reader := strings.NewReader(body)
+
+	req, err := http.NewRequest("POST", url_, reader)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := c.HTTPClient.Do(req)
+
+	if err != nil {
+		fmt.Println("Error in res")
+		os.Exit(1)
+	}
+	defer res.Body.Close()
+
+	resBody, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		fmt.Println("Error in body")
+		os.Exit(1)
+	}
+
+	json.Unmarshal(resBody, &session)
+
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		fmt.Println("Error while getting the config dir")
@@ -102,11 +162,5 @@ func Createdir() string {
 	}
 
 	path := dir + "/" + "spctl"
-	err = os.Mkdir(path, 0o777)
-
-	if err != nil {
-		fmt.Println("Error while creating the dir")
-		os.Exit(1)
-	}
-	return path
+	session.Save(path)
 }

@@ -38,7 +38,7 @@ func main() {
 	// spotify.StartResume(&new_client, &song)
 
 	var search models.SearchResult
-	search = spotify.Search(&new_client)
+	search = spotify.Search(&new_client, "album")
 	fmt.Print(search)
 
 	fmt.Println("Hope this works")
