@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/abhinav0411/spctl/models"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/joho/godotenv"
 	"github.com/pkg/browser"
 	"golang.org/x/oauth2"
 )
@@ -67,6 +69,25 @@ func Login() (string, string) {
 
 	code := <-AuthCodeChan
 	return verifier, code
+}
+
+func LoginCmd() (tea.Msg, models.Client) {
+	err := godotenv.Load()
+	if err != nil {
+		return "ERROR error loading env.", models.Client{}
+	}
+	code_Verifier, code := Login()
+	RequestToken(code_Verifier, code)
+	configDir, err := os.UserConfigDir()
+	new_session := models.Load(configDir + "/spctl")
+	new_http_client := http.Client{}
+
+	new_client := models.Client{
+		Session:    &new_session,
+		HTTPClient: &new_http_client,
+	}
+
+	return "Login complete", new_client
 }
 
 func RequestToken(code_verifier string, code string) {

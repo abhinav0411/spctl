@@ -2,44 +2,47 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
-	"os"
 
-	"github.com/abhinav0411/spctl/models"
-	"github.com/abhinav0411/spctl/spotify"
-	"github.com/joho/godotenv"
+	"github.com/abhinav0411/spctl/ui"
+	// "log"
+	// "net/http"
+	// "os"
+	// "github.com/abhinav0411/spctl/models"
+	// "github.com/abhinav0411/spctl/spotify"
+	// "github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found")
-	}
-	code_verifier, code := spotify.Login()
-	spotify.RequestToken(code_verifier, code)
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Println("No .env file found")
+	// }
+	// code_verifier, code := spotify.Login()
+	// spotify.RequestToken(code_verifier, code)
 
-	configDir, err := os.UserConfigDir()
+	// configDir, err := os.UserConfigDir()
 
-	new_session := models.Load(configDir + "/spctl")
-	new_http_client := http.Client{}
+	// new_session := models.Load(configDir + "/spctl")
+	// new_http_client := http.Client{}
 
-	new_client := models.Client{
-		Session:    &new_session,
-		HTTPClient: &new_http_client,
-	}
+	// new_client := models.Client{
+	// 	Session:    &new_session,
+	// 	HTTPClient: &new_http_client,
+	// }
 
-	// var song models.Song
+	// // var song models.Song
 
-	// song.ContextURI = "spotify:album:5ht7ItJgpBH7W6vJ5BqpPr"
-	// song.OffSet.Position = 5
-	// song.PositionMs = 0
+	// // song.ContextURI = "spotify:album:5ht7ItJgpBH7W6vJ5BqpPr"
+	// // song.OffSet.Position = 5
+	// // song.PositionMs = 0
 
-	// spotify.StartResume(&new_client, &song)
+	// // spotify.StartResume(&new_client, &song)
 
-	var search models.SearchResult
-	search = spotify.Search(&new_client, "album")
-	fmt.Print(search)
+	// var search models.SearchResult
+	// search = spotify.Search(&new_client, "album")
+	// fmt.Print(search)
+
+	ui.Start()
 
 	fmt.Println("Hope this works")
 }
