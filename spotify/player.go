@@ -11,6 +11,14 @@ import (
 	"github.com/abhinav0411/spctl/models"
 )
 
+func Convert(search models.SearchResult, i int) models.Song {
+	var song models.Song
+	song.ContextURI = search.Tracks.Items[i].URI
+	song.PositionMs = 0
+	song.OffSet.Position = 0
+	return song
+}
+
 func StartResume(c *models.Client, song *models.Song, id string) {
 	songJSON, err := json.Marshal(song)
 

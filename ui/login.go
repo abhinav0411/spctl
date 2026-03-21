@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"github.com/abhinav0411/spctl/models"
+	"github.com/abhinav0411/spctl/spotify"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -13,30 +15,26 @@ type login struct {
 	width      int
 	height     int
 	login_Text string
+	returnMsg  tea.Msg
 }
 
-func (m login) Init() tea.Cmd {
-	return nil
-}
-
-func (m login) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *login) LoginUpdate(msg tea.Msg) models.Client {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.String() == "q" {
-			return m, tea.Quit
-		}
 		if msg.String() == "enter" {
-			return m, tea.Quit
+			msg, client := spotify.LoginCmd()
+			m.returnMsg = msg
+			return client
 		}
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 	}
-	return m, nil
+	return models.Client{}
 }
 
-func (m login) View() string {
+func (m *login) LoginView() string {
 	spctl := `
                              █████    ████ 
                             ░░███    ░░███ 
@@ -60,9 +58,4 @@ func (m login) View() string {
 
 	final_str := style.Width(m.width).Align(lipgloss.Center).Render(spctl) + login_style.Width(m.width).PaddingTop((m.height-3)/2).Align(lipgloss.Center).Render(m.login_Text)
 	return final_str
-}
-
-func Start() {
-	p := tea.NewProgram(model{}, tea.WithAltScreen())
-	p.Run()
 }
