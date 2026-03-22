@@ -2,40 +2,32 @@ package ui
 
 import (
 	"github.com/abhinav0411/spctl/models"
-	"github.com/abhinav0411/spctl/spotify"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-var green = lipgloss.Color("#1DB954")
-var style = lipgloss.NewStyle().Foreground(green)
-var login_style = lipgloss.NewStyle().Blink(true)
-
-type login struct {
-	width      int
-	height     int
-	login_Text string
-	returnMsg  tea.Msg
+type screen struct {
+	Player      player
+	spctl       string
+	width       int
+	initialized bool
 }
 
-func (m *login) LoginUpdate(msg tea.Msg) (*models.Client, bool) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "enter" {
-			msg, client := spotify.LoginCmd()
-			m.returnMsg = msg
-			return &client, true
-		}
+func (m *screen) ScreenUpdate(msg tea.Msg, currentSong models.CurrentSong) tea.Cmd {
+	if !m.initialized {
+		m.initialized = true
+		return tickCmd()
+	}
 
+	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.height = msg.Height
 	}
-	return &models.Client{}, false
+
+	return m.Player.PlayerUpdate(msg, currentSong)
 }
 
-func (m *login) LoginView() string {
-	spctl := `
+func (m *screen) ScreenView() string {
+	m.spctl = `
                              █████    ████ 
                             ░░███    ░░███ 
   █████  ████████   ██████  ███████   ░███ 
@@ -48,14 +40,8 @@ func (m *login) LoginView() string {
          █████                             
         ░░░░░                              
 `
+	player_text := m.Player.PlayerView()
 
-	m.login_Text = `
- █   █▀█ █▀▀ ▀█▀ █▀█
- █   █ █ █ █  █  █ █
- ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀
- Press ENTER to login.
-`
-
-	final_str := style.Width(m.width).Align(lipgloss.Center).Render(spctl) + login_style.Width(m.width).PaddingTop((m.height-3)/2).Align(lipgloss.Center).Render(m.login_Text)
+	final_str := m.spctl + player_text //lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(m.spctl) + lipgloss.NewStyle().Render(player_text)
 	return final_str
 }

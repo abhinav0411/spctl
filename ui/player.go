@@ -1,47 +1,89 @@
 package ui
 
 import (
+	"strings"
 	"time"
 
 	"github.com/abhinav0411/spctl/models"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
+const (
+	padding  = 2
+	maxWidth = 42
+)
+
+var trackTitleStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#1DB954")).Render
+
+type tickMsg time.Time
+
 type player struct {
-	name_of_song string
+	isPlaying    bool
+	percent      float64
 	bar          progress.Model
+	deltaDur     float64
+	name_of_song string
 	skip         string
 	prev         string
 }
 
-type tickMsg time.Time
-
-func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong) tea.Cmd {
-	m.name_of_song = current_song.Item.Name
-	time := (current_song.ProgressMs / current_song.Item.DurationMs) / 100
-
-	switch msg := msg.(type) {
-	case tickMsg:
-		if m.bar.Percent() == 1.0 {
-			return tea.Quit
-		}
-
-		cmd := m.bar.IncrPercent(float64(time))
-		return cmd
-
-	case progress.FrameMsg:
-		var cmd tea.Cmd
-		updateModel, cmd := m.bar.Update(msg)
-		m.bar = updateModel.(progress.Model)
-		return cmd
-
-	default:
-		return nil
+func newPlayer() player {
+	prog := progress.New(
+		progress.WithWidth(44),
+		progress.WithoutPercentage(),
+		progress.WithDefaultScaledGradient(),
+	)
+	return player{
+		bar:  prog,
+		skip: ">>",
+		prev: "<<",
 	}
 }
 
+func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong) tea.Cmd {
+	if current_song.Item.Name != "" {
+		m.name_of_song = current_song.Item.Name
+		m.isPlaying = current_song.IsPlaying
+		m.deltaDur = 1000.0 / float64(current_song.Item.DurationMs)
+		m.percent = float64(current_song.ProgressMs) / float64(current_song.Item.DurationMs)
+	}
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.bar.Width = msg.Width - padding*2 - 4
+		if m.bar.Width > maxWidth {
+			m.bar.Width = maxWidth
+		}
+		return nil
+	case tickMsg:
+		if m.isPlaying {
+			m.percent += m.deltaDur
+			if m.percent >= 1.0 {
+				m.percent = 1.0
+			}
+		}
+		return tickCmd()
+	case progress.FrameMsg:
+		updateModel, cmd := m.bar.Update(msg)
+		m.bar = updateModel.(progress.Model)
+		return cmd
+	}
+	return nil
+}
+
 func (m *player) PlayerView() string {
-	final_str := m.skip + " " + m.name_of_song + " " + m.prev + "\n" + m.bar.View()
-	return final_str
+	pad := strings.Repeat(" ", padding)
+	view := pad + trackTitleStyle(m.name_of_song) + "\n"
+	view += pad + m.bar.ViewAs(m.percent)
+	view += "\n" + pad + m.prev + "     " + m.skip
+	return view
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
 }
