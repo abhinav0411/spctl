@@ -15,7 +15,32 @@ type login struct {
 	width      int
 	height     int
 	login_Text string
+	spctl      string
 	returnMsg  tea.Msg
+}
+
+func NewLogin() *login {
+	return &login{
+		spctl: `
+                             █████    ████ 
+                            ░░███    ░░███ 
+  █████  ████████   ██████  ███████   ░███ 
+ ███░░  ░░███░░███ ███░░███░░░███░    ░███ 
+░░█████  ░███ ░███░███ ░░░   ░███     ░███ 
+ ░░░░███ ░███ ░███░███  ███  ░███ ███ ░███ 
+ ██████  ░███████ ░░██████   ░░█████  █████
+░░░░░░   ░███░░░   ░░░░░░     ░░░░░  ░░░░░ 
+         ░███                              
+         █████                             
+        ░░░░░                              
+`,
+		login_Text: `
+ █   █▀█ █▀▀ ▀█▀ █▀█
+ █   █ █ █ █  █  █ █
+ ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀
+ Press ENTER to login.
+`,
+	}
 }
 
 func (m *login) LoginUpdate(msg tea.Msg) (*models.Client, bool) {
@@ -35,27 +60,7 @@ func (m *login) LoginUpdate(msg tea.Msg) (*models.Client, bool) {
 }
 
 func (m *login) LoginView() string {
-	spctl := `
-                             █████    ████ 
-                            ░░███    ░░███ 
-  █████  ████████   ██████  ███████   ░███ 
- ███░░  ░░███░░███ ███░░███░░░███░    ░███ 
-░░█████  ░███ ░███░███ ░░░   ░███     ░███ 
- ░░░░███ ░███ ░███░███  ███  ░███ ███ ░███ 
- ██████  ░███████ ░░██████   ░░█████  █████
-░░░░░░   ░███░░░   ░░░░░░     ░░░░░  ░░░░░ 
-         ░███                              
-         █████                             
-        ░░░░░                              
-`
 
-	m.login_Text = `
- █   █▀█ █▀▀ ▀█▀ █▀█
- █   █ █ █ █  █  █ █
- ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀ ▀ ▀
- Press ENTER to login.
-`
-
-	final_str := style.Width(m.width).Align(lipgloss.Center).Render(spctl) + login_style.Width(m.width).PaddingTop((m.height-3)/2).Align(lipgloss.Center).Render(m.login_Text)
+	final_str := style.Width(m.width).Align(lipgloss.Center).Render(m.spctl) + login_style.Width(m.width).PaddingTop((m.height-3)/2).Align(lipgloss.Center).Render(m.login_Text)
 	return final_str
 }

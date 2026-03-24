@@ -2,7 +2,6 @@ package spotify
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -11,10 +10,18 @@ import (
 	"github.com/abhinav0411/spctl/models"
 )
 
-func Convert(search models.SearchResult, i int) models.Song {
+func ConvertSearch(search models.SearchResult, i int) models.Song {
 	var song models.Song
 	song.ContextURI = search.Tracks.Items[i].URI
 	song.PositionMs = 0
+	song.OffSet.Position = 0
+	return song
+}
+
+func ConvertResume(current_song models.CurrentSong) models.Song {
+	var song models.Song
+	song.ContextURI = current_song.Item.URI
+	song.PositionMs = current_song.ProgressMs
 	song.OffSet.Position = 0
 	return song
 }
@@ -41,16 +48,14 @@ func StartResume(c *models.Client, song *models.Song, id string) {
 	req.Header.Set("Authorization", "Bearer "+access_token)
 	req.Header.Set("Content-Type", "application/json")
 
-	res, err := c.HTTPClient.Do(req)
-
-	fmt.Println(res.StatusCode)
+	_, err = c.HTTPClient.Do(req)
 }
 
 func Pause(c *models.Client, id string) {
 	params := url.Values{}
 	params.Set("device_id", id)
 
-	url := "https://api.spotify.com/v1/me/player/pause" + params.Encode()
+	url := "https://api.spotify.com/v1/me/player/pause?" + params.Encode()
 
 	req, err := http.NewRequest("PUT", url, nil)
 
@@ -61,14 +66,10 @@ func Pause(c *models.Client, id string) {
 	access_token := c.Session.AccessToken
 	req.Header.Set("Authorization", "Bearer "+access_token)
 
-	res, err := c.HTTPClient.Do(req)
+	_, err = c.HTTPClient.Do(req)
 
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if res.StatusCode != 204 {
-		fmt.Println("Something went wrong")
 	}
 }
 
@@ -77,7 +78,7 @@ func SkipNext(c *models.Client, id string) {
 	params := url.Values{}
 	params.Set("device_id", id)
 
-	url := "https://api.spotify.com/v1/me/player/next" + params.Encode()
+	url := "https://api.spotify.com/v1/me/player/next?" + params.Encode()
 
 	req, err := http.NewRequest("POST", url, nil)
 
@@ -88,14 +89,10 @@ func SkipNext(c *models.Client, id string) {
 	access_token := c.Session.AccessToken
 	req.Header.Set("Authorization", "Bearer "+access_token)
 
-	res, err := c.HTTPClient.Do(req)
+	_, err = c.HTTPClient.Do(req)
 
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if res.StatusCode != 204 {
-		fmt.Println("Something went wrong")
 	}
 }
 
@@ -103,7 +100,7 @@ func SkipPrev(c *models.Client, id string) {
 	params := url.Values{}
 	params.Set("device_id", id)
 
-	url := "https://api.spotify.com/v1/me/player/previous" + params.Encode()
+	url := "https://api.spotify.com/v1/me/player/previous?" + params.Encode()
 
 	req, err := http.NewRequest("POST", url, nil)
 
@@ -114,13 +111,9 @@ func SkipPrev(c *models.Client, id string) {
 	access_token := c.Session.AccessToken
 	req.Header.Set("Authorization", "Bearer "+access_token)
 
-	res, err := c.HTTPClient.Do(req)
+	_, err = c.HTTPClient.Do(req)
 
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if res.StatusCode != 204 {
-		fmt.Println("Something went wrong")
 	}
 }

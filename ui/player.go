@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/abhinav0411/spctl/models"
+	"github.com/abhinav0411/spctl/spotify"
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -30,7 +31,7 @@ type player struct {
 	prev         string
 }
 
-func newPlayer() player {
+func NewPlayer() player {
 	prog := progress.New(
 		progress.WithWidth(44),
 		progress.WithoutPercentage(),
@@ -43,7 +44,7 @@ func newPlayer() player {
 	}
 }
 
-func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong) tea.Cmd {
+func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong, client models.Client, device models.PlayerDevice) tea.Cmd {
 	if current_song.Item.Name != "" {
 		m.name_of_song = current_song.Item.Name
 		m.isPlaying = current_song.IsPlaying
@@ -70,6 +71,17 @@ func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong) tea.
 		updateModel, cmd := m.bar.Update(msg)
 		m.bar = updateModel.(progress.Model)
 		return cmd
+	case tea.KeyMsg:
+		if msg.String() == ">" {
+			spotify.SkipNext(&client, device.ID)
+		} else if msg.String() == "<" {
+			spotify.SkipPrev(&client, device.ID)
+		} else if msg.String() == " " && current_song.IsPlaying {
+			spotify.Pause(&client, device.ID)
+		} else if msg.String() == " " && !current_song.IsPlaying {
+			resumeSong := spotify.ConvertResume(current_song)
+			spotify.StartResume(&client, &resumeSong, device.ID)
+		}
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/abhinav0411/spctl/models"
 	"github.com/abhinav0411/spctl/spotify"
@@ -15,13 +16,14 @@ type spctl struct {
 	screenModel   *screen
 	logged_in     bool
 	currentSong   models.CurrentSong
+	device        []models.PlayerDevice
 }
 
 func initialModel() spctl {
 	return spctl{
 		currentScreen: "login",
 		logged_in:     false,
-		loginModel:    &login{},
+		loginModel:    NewLogin(),
 		screenModel: &screen{
 			Player: newPlayer(),
 		},
@@ -45,12 +47,17 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "login":
 		m.client, m.logged_in = m.loginModel.LoginUpdate(msg)
 	case "screen":
-		cmd = m.screenModel.ScreenUpdate(msg, m.currentSong)
+		cmd = m.screenModel.ScreenUpdate(msg, m.currentSong, *m.client, m.device[0])
 	}
 
 	if m.logged_in {
 		m.currentScreen = "screen"
 		m.currentSong = spotify.GetCurrentSong(m.client)
+		var err error
+		m.device, err = spotify.GetDevice(m.client)
+		if err != nil {
+			log.Fatal("error while getting device")
+		}
 	}
 
 	return m, cmd
