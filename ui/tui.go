@@ -24,14 +24,12 @@ func initialModel() spctl {
 		currentScreen: "login",
 		logged_in:     false,
 		loginModel:    NewLogin(),
-		screenModel: &screen{
-			Player: newPlayer(),
-		},
+		screenModel:   NewScreen(),
 	}
 }
 
 func (m spctl) Init() tea.Cmd {
-	return nil
+	return tea.WindowSize()
 }
 
 func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -47,7 +45,9 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "login":
 		m.client, m.logged_in = m.loginModel.LoginUpdate(msg)
 	case "screen":
-		cmd = m.screenModel.ScreenUpdate(msg, m.currentSong, *m.client, m.device[0])
+		if len(m.device) > 0 {
+			cmd = m.screenModel.ScreenUpdate(msg, m.currentSong, *m.client, m.device[0])
+		}
 	}
 
 	if m.logged_in {
@@ -62,6 +62,7 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, cmd
 }
+
 func (m spctl) View() string {
 	switch m.currentScreen {
 	case "login":

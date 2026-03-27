@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -26,7 +27,22 @@ func ConvertResume(current_song models.CurrentSong) models.Song {
 	return song
 }
 
-func StartResume(c *models.Client, song *models.Song, id string) {
+func TransferPlayback(c *models.Client, deviceID string) {
+	body := fmt.Sprintf(`{"device_ids": ["%s"], "play": false}`, deviceID)
+
+	req, _ := http.NewRequest(
+		"PUT",
+		"https://api.spotify.com/v1/me/player",
+		strings.NewReader(body),
+	)
+
+	req.Header.Set("Authorization", "Bearer "+c.Session.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	c.HTTPClient.Do(req)
+}
+
+func Start(c *models.Client, song *models.Song, id string) {
 	songJSON, err := json.Marshal(song)
 
 	if err != nil {
@@ -49,6 +65,19 @@ func StartResume(c *models.Client, song *models.Song, id string) {
 	req.Header.Set("Content-Type", "application/json")
 
 	_, err = c.HTTPClient.Do(req)
+}
+
+func Resume(c *models.Client, id string) {
+	params := url.Values{}
+	params.Set("device_id", id)
+
+	url := "https://api.spotify.com/v1/me/player/play?" + params.Encode()
+
+	req, _ := http.NewRequest("PUT", url, nil)
+
+	req.Header.Set("Authorization", "Bearer "+c.Session.AccessToken)
+
+	c.HTTPClient.Do(req)
 }
 
 func Pause(c *models.Client, id string) {

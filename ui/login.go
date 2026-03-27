@@ -60,7 +60,24 @@ func (m *login) LoginUpdate(msg tea.Msg) (*models.Client, bool) {
 }
 
 func (m *login) LoginView() string {
+	logo := style.Render(m.spctl)
+	loginText := login_style.Render(m.login_Text)
 
-	final_str := style.Width(m.width).Align(lipgloss.Center).Render(m.spctl) + login_style.Width(m.width).PaddingTop((m.height-3)/2).Align(lipgloss.Center).Render(m.login_Text)
-	return final_str
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		logo,
+		"",
+		loginText,
+	)
+
+	card := lipgloss.NewStyle().
+		Padding(1, 4).
+		Render(content)
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		card,
+	)
 }

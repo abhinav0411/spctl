@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/abhinav0411/spctl/models"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -51,6 +53,22 @@ func (m *screen) ScreenUpdate(msg tea.Msg, currentSong models.CurrentSong, clien
 func (m *screen) ScreenView() string {
 	player_text := m.Player.PlayerView()
 
-	final_str := style.Width(m.width).Align(lipgloss.Center).Render(m.spctl) + lipgloss.NewStyle().Height(m.height).Width(m.width).AlignHorizontal(lipgloss.Bottom).AlignVertical(lipgloss.Right).Render(player_text)
-	return final_str
+	styledLogo := style.Render(m.spctl)
+	logo := lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		styledLogo,
+	)
+
+	player := lipgloss.NewStyle().Width(m.width).Align(lipgloss.Right).Render(player_text)
+
+	spacerHeight := m.height - lipgloss.Height(logo) - lipgloss.Height(player)
+	if spacerHeight < 0 {
+		spacerHeight = 0
+	}
+	spacer := strings.Repeat("\n", spacerHeight)
+
+	return logo + spacer + player
 }

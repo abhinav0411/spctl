@@ -17,7 +17,9 @@ const (
 )
 
 var trackTitleStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#1DB954")).Render
+	Foreground(lipgloss.Color("#e0aaff")).
+	Bold(true).
+	Render
 
 type tickMsg time.Time
 
@@ -29,13 +31,14 @@ type player struct {
 	name_of_song string
 	skip         string
 	prev         string
+	width        int
 }
 
 func NewPlayer() player {
 	prog := progress.New(
 		progress.WithWidth(44),
 		progress.WithoutPercentage(),
-		progress.WithDefaultScaledGradient(),
+		progress.WithScaledGradient("#20002c", "#9c27b0"),
 	)
 	return player{
 		bar:  prog,
@@ -54,11 +57,16 @@ func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong, clie
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.bar.Width = msg.Width - padding*2 - 4
+		m.width = msg.Width
+		m.bar.Width = msg.Width - padding*2 - 20
 		if m.bar.Width > maxWidth {
 			m.bar.Width = maxWidth
 		}
+		if m.bar.Width < 10 {
+			m.bar.Width = 10
+		}
 		return nil
+
 	case tickMsg:
 		if m.isPlaying {
 			m.percent += m.deltaDur
@@ -67,10 +75,12 @@ func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong, clie
 			}
 		}
 		return tickCmd()
+
 	case progress.FrameMsg:
 		updateModel, cmd := m.bar.Update(msg)
 		m.bar = updateModel.(progress.Model)
 		return cmd
+
 	case tea.KeyMsg:
 		if msg.String() == ">" {
 			spotify.SkipNext(&client, device.ID)
@@ -79,8 +89,8 @@ func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong, clie
 		} else if msg.String() == " " && current_song.IsPlaying {
 			spotify.Pause(&client, device.ID)
 		} else if msg.String() == " " && !current_song.IsPlaying {
-			resumeSong := spotify.ConvertResume(current_song)
-			spotify.StartResume(&client, &resumeSong, device.ID)
+			spotify.TransferPlayback(&client, device.ID)
+			spotify.Resume(&client, device.ID)
 		}
 	}
 	return nil
@@ -88,9 +98,38 @@ func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong, clie
 
 func (m *player) PlayerView() string {
 	pad := strings.Repeat(" ", padding)
-	view := pad + trackTitleStyle(m.name_of_song) + "\n"
-	view += pad + m.bar.ViewAs(m.percent)
-	view += "\n" + pad + m.prev + "     " + m.skip
+
+	name := m.name_of_song
+
+	maxTitleWidth := 20
+	if len(name) > maxTitleWidth {
+		name = name[:maxTitleWidth-3] + "..."
+	}
+
+	barWidth := m.bar.Width
+	if barWidth == 0 {
+		barWidth = maxWidth
+	}
+
+	controls := lipgloss.NewStyle().
+		Width(barWidth + maxTitleWidth).
+		Align(lipgloss.Center).
+		Render(m.prev + "     " + m.skip)
+
+	bar := m.bar.ViewAs(m.percent)
+	title := trackTitleStyle(name)
+
+	row := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		title,
+		"  ",
+		bar,
+	)
+
+	view := "\n"
+	view += pad + row + "\n"
+	view += pad + controls
+
 	return view
 }
 
