@@ -116,7 +116,7 @@ func RequestToken(code_verifier string, code string) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Error in res")
+		fmt.Println("Error in res", err)
 		os.Exit(1)
 	}
 	defer res.Body.Close()

@@ -16,8 +16,9 @@ func Search(c *models.Client, search_type string) models.SearchResult {
 	var searchResult models.SearchResult
 
 	params := url.Values{}
-	params.Add("type", search_type)
-	params.Add("q", "DAMN")
+	params.Add("type", "track")
+	params.Add("limit", "10")
+	params.Add("q", search_type)
 
 	new_url := url_ + params.Encode()
 

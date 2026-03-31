@@ -42,29 +42,21 @@ func TransferPlayback(c *models.Client, deviceID string) {
 	c.HTTPClient.Do(req)
 }
 
-func Start(c *models.Client, song *models.Song, id string) {
-	songJSON, err := json.Marshal(song)
-
-	if err != nil {
-		log.Fatal(err)
-	}
+func Start(c *models.Client, body interface{}, id string) {
+	songJSON, _ := json.Marshal(body)
 
 	params := url.Values{}
 	params.Set("device_id", id)
 
 	reader := strings.NewReader(string(songJSON))
 	url := "https://api.spotify.com/v1/me/player/play?" + params.Encode()
-	req, err := http.NewRequest("PUT", url, reader)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	access_token := c.Session.AccessToken
+	req, _ := http.NewRequest("PUT", url, reader)
 
-	req.Header.Set("Authorization", "Bearer "+access_token)
+	req.Header.Set("Authorization", "Bearer "+c.Session.AccessToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	_, err = c.HTTPClient.Do(req)
+	c.HTTPClient.Do(req)
 }
 
 func Resume(c *models.Client, id string) {

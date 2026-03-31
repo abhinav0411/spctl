@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"time"
 
 	"github.com/abhinav0411/spctl/models"
@@ -11,130 +10,175 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const (
-	padding  = 2
-	maxWidth = 42
-)
+type tickMsg struct{}
 
-var trackTitleStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#e0aaff")).
-	Bold(true).
-	Render
+type Player struct {
+	width int
 
-type tickMsg time.Time
+	progress progress.Model
 
-type player struct {
-	isPlaying    bool
-	percent      float64
-	bar          progress.Model
-	deltaDur     float64
-	name_of_song string
-	skip         string
-	prev         string
-	width        int
+	percent   float64
+	isPlaying bool
+	delta     float64
+
+	trackName string
 }
 
-func NewPlayer() player {
+// --- INIT ---
+
+func NewPlayer() Player {
 	prog := progress.New(
-		progress.WithWidth(44),
+		progress.WithDefaultGradient(),
 		progress.WithoutPercentage(),
-		progress.WithScaledGradient("#20002c", "#9c27b0"),
 	)
-	return player{
-		bar:  prog,
-		skip: ">>",
-		prev: "<<",
+
+	return Player{
+		progress: prog,
+		percent:  0,
+		delta:    0.01,
 	}
 }
 
-func (m *player) PlayerUpdate(msg tea.Msg, current_song models.CurrentSong, client models.Client, device models.PlayerDevice) tea.Cmd {
-	if current_song.Item.Name != "" {
-		m.name_of_song = current_song.Item.Name
-		m.isPlaying = current_song.IsPlaying
-		m.deltaDur = 1000.0 / float64(current_song.Item.DurationMs)
-		m.percent = float64(current_song.ProgressMs) / float64(current_song.Item.DurationMs)
-	}
+func (p Player) Init() tea.Cmd {
+	return tickCmd()
+}
 
+// --- UPDATE ---
+
+func (p Player) Update(msg tea.Msg, client *models.Client, id string) (Player, tea.Cmd) {
 	switch msg := msg.(type) {
+
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.bar.Width = msg.Width - padding*2 - 20
-		if m.bar.Width > maxWidth {
-			m.bar.Width = maxWidth
-		}
-		if m.bar.Width < 10 {
-			m.bar.Width = 10
-		}
-		return nil
+		p.width = msg.Width
 
-	case tickMsg:
-		if m.isPlaying {
-			m.percent += m.deltaDur
-			if m.percent >= 1.0 {
-				m.percent = 1.0
-			}
+		barWidth := p.width / 3
+		if barWidth < 20 {
+			barWidth = 20
 		}
-		return tickCmd()
-
-	case progress.FrameMsg:
-		updateModel, cmd := m.bar.Update(msg)
-		m.bar = updateModel.(progress.Model)
-		return cmd
+		p.progress.Width = barWidth
 
 	case tea.KeyMsg:
-		if msg.String() == ">" {
-			spotify.SkipNext(&client, device.ID)
-		} else if msg.String() == "<" {
-			spotify.SkipPrev(&client, device.ID)
-		} else if msg.String() == " " && current_song.IsPlaying {
-			spotify.Pause(&client, device.ID)
-		} else if msg.String() == " " && !current_song.IsPlaying {
-			spotify.TransferPlayback(&client, device.ID)
-			spotify.Resume(&client, device.ID)
+		switch msg.String() {
+
+		case " ":
+			if p.isPlaying {
+				p.isPlaying = false
+				return p, pauseCmd(client, id)
+			} else {
+				p.isPlaying = true
+				return p, resumeCmd(client, id)
+			}
+
+		case "n":
+			return p, nextCmd(client, id)
+
+		case "p":
+			return p, prevCmd(client, id)
 		}
+
+	case tickMsg:
+		if p.isPlaying {
+			p.percent += p.delta
+
+			if p.percent >= 1.0 {
+				p.percent = 1.0
+			}
+		}
+		return p, tickCmd()
 	}
-	return nil
+	return p, nil
 }
 
-func (m *player) PlayerView() string {
-	pad := strings.Repeat(" ", padding)
+// --- SET SONG FROM BACKEND ---
 
-	name := m.name_of_song
+func (p Player) SetSong(song models.CurrentSong) Player {
+	p.trackName = song.Item.Name
+	p.isPlaying = song.IsPlaying
 
-	maxTitleWidth := 20
-	if len(name) > maxTitleWidth {
-		name = name[:maxTitleWidth-3] + "..."
+	if song.Item.DurationMs > 0 {
+		p.percent = float64(song.ProgressMs) / float64(song.Item.DurationMs)
+
+		// increment per second
+		p.delta = 1.0 / (float64(song.Item.DurationMs) / 1000.0)
 	}
 
-	barWidth := m.bar.Width
-	if barWidth == 0 {
-		barWidth = maxWidth
+	return p
+}
+
+// --- VIEW ---
+
+func (p Player) View() string {
+	if p.width == 0 {
+		return ""
 	}
 
-	controls := lipgloss.NewStyle().
-		Width(barWidth + maxTitleWidth).
-		Align(lipgloss.Center).
-		Render(m.prev + "     " + m.skip)
+	left := lipgloss.NewStyle().
+		Width(p.width / 3).
+		Render(p.trackName)
 
-	bar := m.bar.ViewAs(m.percent)
-	title := trackTitleStyle(name)
+	center := lipgloss.NewStyle().
+		Width(p.width / 3).
+		Render(p.progress.ViewAs(p.percent))
 
-	row := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		title,
-		"  ",
-		bar,
+	right := lipgloss.NewStyle().
+		Width(p.width / 3).
+		Align(lipgloss.Right).
+		Render("⏮    ⏭")
+
+	bar := lipgloss.JoinHorizontal(
+		lipgloss.Center,
+		left,
+		center,
+		right,
 	)
 
-	view := "\n"
-	view += pad + row + "\n"
-	view += pad + controls
+	container := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(0, 1)
 
-	return view
+	return container.Render(
+		lipgloss.NewStyle().
+			Width(p.width - container.GetHorizontalFrameSize()).
+			Render(bar),
+	)
 }
+
+// --- TICK LOOP ---
 
 func tickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
-		return tickMsg(t)
+		return tickMsg{}
 	})
+}
+
+func PlayerTickCmd() tea.Cmd {
+	return tickCmd()
+}
+
+func pauseCmd(client *models.Client, id string) tea.Cmd {
+	return func() tea.Msg {
+		spotify.Pause(client, id)
+		return nil
+	}
+}
+
+func resumeCmd(client *models.Client, id string) tea.Cmd {
+	return func() tea.Msg {
+		spotify.Resume(client, id)
+		return nil
+	}
+}
+
+func nextCmd(client *models.Client, id string) tea.Cmd {
+	return func() tea.Msg {
+		spotify.SkipNext(client, id)
+		return nil
+	}
+}
+
+func prevCmd(client *models.Client, id string) tea.Cmd {
+	return func() tea.Msg {
+		spotify.SkipPrev(client, id)
+		return nil
+	}
 }
