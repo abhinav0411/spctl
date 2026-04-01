@@ -31,10 +31,35 @@ func refreshSongCmd(client *models.Client) tea.Cmd {
 
 func fetchDeviceCmd(client *models.Client) models.PlayerDevice {
 	devices, err := spotify.GetDevice(client)
-	if err != nil {
+	if err != nil || len(devices) == 0 {
 		return models.PlayerDevice{}
 	}
 	return devices[0]
+}
+
+func fetchDevicesCmd(client *models.Client) tea.Cmd {
+	return func() tea.Msg {
+		devices, err := spotify.GetDevice(client)
+		if err != nil || len(devices) == 0 {
+			return []models.PlayerDevice{}
+		}
+		return devices
+	}
+}
+
+func fetchSongCmd(client *models.Client) tea.Cmd {
+	return func() tea.Msg {
+		return spotify.GetCurrentSong(client)
+	}
+}
+
+// 🔥 slow tick
+type slowTickMsg struct{}
+
+func slowTickCmd() tea.Cmd {
+	return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
+		return slowTickMsg{}
+	})
 }
 
 // --- INITIAL MODEL ---
@@ -51,13 +76,13 @@ func initialModel() spctl {
 // --- INIT ---
 
 func (m spctl) Init() tea.Cmd {
-	return nil
+	return slowTickCmd()
 }
 
 // --- UPDATE ---
 
 func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 
@@ -68,14 +93,23 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case models.CurrentSong:
 		m.currentSong = msg
-
 		if m.client != nil {
-			return m, refreshSongCmd(m.client)
+			cmds = append(cmds, refreshSongCmd(m.client))
 		}
+
 	case []models.PlayerDevice:
 		if len(msg) > 0 {
 			m.device = msg[0]
 		}
+
+	case slowTickMsg:
+		if m.loggedIn && m.client != nil {
+			cmds = append(cmds,
+				fetchSongCmd(m.client),
+				fetchDevicesCmd(m.client),
+			)
+		}
+		cmds = append(cmds, slowTickCmd())
 	}
 
 	switch m.currentScreen {
@@ -88,25 +122,30 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if m.client != nil {
 				m.device = fetchDeviceCmd(m.client)
-				return m, tea.Batch(
+
+				cmds = append(cmds,
 					refreshSongCmd(m.client),
 					PlayerTickCmd(),
+					slowTickCmd(),
 				)
 			}
 		}
 
 	case "screen":
 		if m.client != nil {
-			cmd = m.screenModel.ScreenUpdate(
+			cmd := m.screenModel.ScreenUpdate(
 				msg,
 				m.currentSong,
 				*m.client,
 				m.device,
 			)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		}
 	}
 
-	return m, cmd
+	return m, tea.Batch(cmds...)
 }
 
 // --- VIEW ---

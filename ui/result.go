@@ -21,13 +21,11 @@ type Playlist struct {
 	selected int
 	width    int
 	height   int
-	focused  bool
 }
 
 func NewPlaylist() Playlist {
 	return Playlist{
 		items:    []TrackItem{},
-		focused:  false,
 		selected: 0,
 	}
 }
@@ -36,8 +34,8 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
-		p.width = msg.Width / 3
-		p.height = msg.Height - 8
+		p.width = msg.Width / 2 // 🔥 better layout (since no queue)
+		p.height = msg.Height - 6
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -67,6 +65,11 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 }
 
 func (p Playlist) View() string {
+	// 🔥 prevent crash / invisible UI
+	if p.width == 0 || p.height == 0 {
+		return ""
+	}
+
 	style := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Width(p.width).
@@ -90,9 +93,14 @@ func (p Playlist) View() string {
 		lines = append(lines, line)
 	}
 
-	// 🔥 clamp to height
-	if len(lines) > p.height-2 {
-		lines = lines[:p.height-2]
+	// 🔥 safe clamp
+	maxLines := p.height - 2
+	if maxLines < 1 {
+		maxLines = 1
+	}
+
+	if len(lines) > maxLines {
+		lines = lines[:maxLines]
 	}
 
 	content := ""
@@ -102,6 +110,7 @@ func (p Playlist) View() string {
 
 	return style.Render(content)
 }
+
 func (p Playlist) SetResults(search models.SearchResult) Playlist {
 	var items []TrackItem
 
