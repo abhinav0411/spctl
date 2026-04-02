@@ -27,7 +27,8 @@ func CreateConf() *oauth2.Config {
 	conf := &oauth2.Config{
 		ClientID: os.Getenv("CLIENT_ID"),
 		Endpoint: oauth2.Endpoint{
-			AuthURL: "https://accounts.spotify.com/authorize",
+			AuthURL:  "https://accounts.spotify.com/authorize",
+			TokenURL: "https://accounts.spotify.com/api/token",
 		},
 		RedirectURL: os.Getenv("REDIRECT_URL"),
 		Scopes:      scope_list,

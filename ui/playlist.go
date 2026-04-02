@@ -2,22 +2,25 @@ package ui
 
 import (
 	"github.com/abhinav0411/spctl/models"
+	"github.com/abhinav0411/spctl/spotify"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type TrackItem struct {
-	Title  string
-	Artist string
-	URI    string
+type PlaylistItem struct {
+	Name string
+	ID   string
+	URI  string
 }
 
-type PlaySongMsg struct {
-	URI string
+type SelectPlaylistMsg struct {
+	ID   string
+	URI  string
+	Play bool
 }
 
-type Result struct {
-	items        []TrackItem
+type Playlist struct {
+	items        []PlaylistItem
 	selected     int
 	scrollOffset int
 	width        int
@@ -25,22 +28,21 @@ type Result struct {
 	focused      bool
 }
 
-func NewResult() Result {
-	return Result{
-		items:    []TrackItem{},
-		focused:  false,
+func NewPlaylist() Playlist {
+	return Playlist{
+		items:    []PlaylistItem{},
 		selected: 0,
+		focused:  false,
 	}
 }
 
-func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
+func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.width = msg.Width / 3
 		p.height = msg.Height - 8
 
 	case tea.KeyMsg:
-		// Only handle navigation keys if this panel is focused
 		if !p.focused {
 			return p, nil
 		}
@@ -49,7 +51,6 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 		case "up", "k":
 			if p.selected > 0 {
 				p.selected--
-				// Scroll up if needed
 				if p.selected < p.scrollOffset {
 					p.scrollOffset = p.selected
 				}
@@ -58,10 +59,21 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 		case "down", "j":
 			if p.selected < len(p.items)-1 {
 				p.selected++
-				// Scroll down if needed
 				visibleLines := p.height - 4
 				if p.selected >= p.scrollOffset+visibleLines {
 					p.scrollOffset = p.selected - visibleLines + 1
+				}
+			}
+
+		case "v":
+			if len(p.items) > 0 {
+				selected := p.items[p.selected]
+				return p, func() tea.Msg {
+					return SelectPlaylistMsg{
+						ID:   selected.ID,
+						URI:  selected.URI,
+						Play: false, // view tracks
+					}
 				}
 			}
 
@@ -69,7 +81,11 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 			if len(p.items) > 0 {
 				selected := p.items[p.selected]
 				return p, func() tea.Msg {
-					return PlaySongMsg{URI: selected.URI}
+					return SelectPlaylistMsg{
+						ID:   selected.ID,
+						URI:  selected.URI,
+						Play: true, // play directly
+					}
 				}
 			}
 		}
@@ -78,7 +94,7 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 	return p, nil
 }
 
-func (p Result) View() string {
+func (p Playlist) View() string {
 	borderColor := lipgloss.Color("#555555")
 	if p.focused {
 		borderColor = lipgloss.Color("#1DB954") // Spotify green when focused
@@ -91,12 +107,12 @@ func (p Result) View() string {
 		Height(p.height)
 
 	if len(p.items) == 0 {
-		return style.Render("Search for a song...")
+		return style.Render("No playlists found")
 	}
 
 	visibleLines := p.height - 4
 	if visibleLines < 1 {
-		visibleLines = 1
+		visibleLines = 1 // this saves it but shows only 1 line
 	}
 
 	end := p.scrollOffset + visibleLines
@@ -107,7 +123,7 @@ func (p Result) View() string {
 	var content string
 	for i := p.scrollOffset; i < end; i++ {
 		item := p.items[i]
-		line := item.Title + " - " + item.Artist
+		line := item.Name
 		if i == p.selected {
 			line = "> " + line
 		} else {
@@ -119,21 +135,36 @@ func (p Result) View() string {
 	return style.Render(content)
 }
 
-func (p Result) SetResults(search models.SearchResult) Result {
-	var items []TrackItem
-	for _, track := range search.Tracks.Items {
-		artist := ""
-		if len(track.Artists) > 0 {
-			artist = track.Artists[0].Name
-		}
-		items = append(items, TrackItem{
-			Title:  track.Name,
-			Artist: artist,
-			URI:    track.URI,
+func (p Playlist) SetPlaylists(data models.PlaylistResponse) Playlist {
+	var items []PlaylistItem
+	for _, pl := range data.Items {
+		items = append(items, PlaylistItem{
+			Name: pl.Name,
+			ID:   pl.ID,
+			URI:  pl.URI,
 		})
 	}
 	p.items = items
 	p.selected = 0
 	p.scrollOffset = 0
 	return p
+}
+
+func fetchPlaylistsCmd(client *models.Client) tea.Cmd {
+	return func() tea.Msg {
+		return spotify.GetUserPlaylists(client)
+	}
+}
+
+func fetchPlaylistTracksCmd(client *models.Client, playlistID string) tea.Cmd {
+	return func() tea.Msg {
+		return spotify.GetPlaylistTracks(client, playlistID)
+	}
+}
+
+func playPlaylistCmd(client models.Client, uri string, deviceID string) tea.Cmd {
+	return func() tea.Msg {
+		spotify.PlayPlaylist(&client, uri, deviceID)
+		return nil
+	}
 }

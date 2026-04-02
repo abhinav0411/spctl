@@ -182,3 +182,16 @@ func prevCmd(client *models.Client, id string) tea.Cmd {
 		return nil
 	}
 }
+
+func playSongCmd(client models.Client, uri string, deviceID string) tea.Cmd {
+	return func() tea.Msg {
+
+		body := map[string]interface{}{
+			"uris": []string{uri},
+		}
+
+		spotify.Start(&client, body, deviceID)
+
+		return nil
+	}
+}
