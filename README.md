@@ -1,5 +1,8 @@
 # spctl
 
+<img width="1352" height="734" alt="image" src="https://github.com/user-attachments/assets/ba2384ca-c12b-4ab4-bae7-468981158022" />
+
+
 A terminal-based Spotify client built with Go, Bubbletea, and Lipgloss.
 
 ## Features
@@ -65,3 +68,4 @@ go build ./cmd/spctl/
 
 - Spotify Premium is required for playback control via the API
 - Make sure you have an active Spotify session open on a device before launching spctl
+
