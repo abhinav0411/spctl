@@ -140,6 +140,7 @@ func (s *screen) ScreenUpdate(
 	case SelectPlaylistMsg:
 		if msg.Play {
 			cmds = append(cmds, playPlaylistCmd(client, msg.URI, device.ID))
+			cmds = append(cmds, fetchPlaylistTracksCmd(&client, msg.ID))
 		} else {
 			cmds = append(cmds, fetchPlaylistTracksCmd(&client, msg.ID))
 		}
@@ -220,19 +221,45 @@ func (s *screen) ScreenView() string {
 		return "Initializing..."
 	}
 
+	// heights
+	searchHeight := lipgloss.Height(s.search.View())
+	playerHeight := lipgloss.Height(s.player.View())
+	middleHeight := s.height - searchHeight - playerHeight
+
 	// --- TOP ---
-	top := s.search.View()
+	top := lipgloss.NewStyle().
+		Width(s.width).
+		Render(s.search.View())
 
-	// --- LEFT ---
-	left := s.result.View()
+	// --- CENTER LOGO + KEYBINDS ---
+	logoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#1DB954")).
+		Bold(true).
+		Align(lipgloss.Center)
 
-	// --- CENTER ---
+	keyStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#444444"))
+
+	accentKey := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Bold(true)
+
+	keybinds := "\n\n" +
+		accentKey.Render("enter") + keyStyle.Render("  play track") + "\n" +
+		accentKey.Render("v    ") + keyStyle.Render("  view playlist") + "\n" +
+		accentKey.Render("p    ") + keyStyle.Render("  play playlist") + "\n" +
+		accentKey.Render("tab  ") + keyStyle.Render("  switch panel") + "\n" +
+		accentKey.Render("space") + keyStyle.Render("  pause/resume") + "\n" +
+		accentKey.Render("n / b") + keyStyle.Render("  next/prev")
+
 	center := lipgloss.NewStyle().
 		Width(s.width/3).
+		Height(middleHeight).
 		Align(lipgloss.Center, lipgloss.Center).
-		Render(s.logo)
+		Render(logoStyle.Render(s.logo) + keybinds)
 
-	// --- RIGHT (PLAYLIST) ---
+	// --- MIDDLE ---
+	left := s.result.View()
 	right := s.playlist.View()
 
 	middle := lipgloss.JoinHorizontal(
@@ -243,7 +270,9 @@ func (s *screen) ScreenView() string {
 	)
 
 	// --- BOTTOM ---
-	bottom := s.player.View()
+	bottom := lipgloss.NewStyle().
+		Width(s.width).
+		Render(s.player.View())
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,

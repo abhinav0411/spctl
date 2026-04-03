@@ -19,6 +19,7 @@ type PlaylistTrackItem struct {
 	Track *PlaylistTrack `json:"track"`
 	Item  *PlaylistTrack `json:"item"` // some entries use "item" instead
 }
+
 type PlaylistTrack struct {
 	Name    string           `json:"name"`
 	URI     string           `json:"uri"`

@@ -21,17 +21,17 @@ type Player struct {
 	isPlaying bool
 	delta     float64
 
-	trackName string
+	trackName  string
+	artishName string
 }
 
 // --- INIT ---
 
 func NewPlayer() Player {
 	prog := progress.New(
-		progress.WithDefaultGradient(),
+		progress.WithGradient("#0d9488", "#0a0a0a"),
 		progress.WithoutPercentage(),
 	)
-
 	return Player{
 		progress: prog,
 		percent:  0,
@@ -94,6 +94,11 @@ func (p Player) Update(msg tea.Msg, client *models.Client, id string) (Player, t
 func (p Player) SetSong(song models.CurrentSong) Player {
 	p.trackName = song.Item.Name
 	p.isPlaying = song.IsPlaying
+	if len(song.Item.Artists) > 0 {
+		p.artishName = song.Item.Artists[0].Name
+	} else {
+		p.artishName = "Unknown Artist"
+	}
 
 	if song.Item.DurationMs > 0 {
 		p.percent = float64(song.ProgressMs) / float64(song.Item.DurationMs)
@@ -112,28 +117,41 @@ func (p Player) View() string {
 		return ""
 	}
 
+	// 🎵 Track name (primary)
+	trackStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#4fcac0")).
+		Bold(true).
+		MaxWidth(p.width / 4)
+
+	artistStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#a24ead")).
+		Italic(true)
+
+	track := trackStyle.Render(p.trackName)
+	artist := artistStyle.Render(p.artishName)
+
+	trackBlock := track + "\n" + artist
+
 	left := lipgloss.NewStyle().
 		Width(p.width / 3).
-		Render(p.trackName)
+		Render(trackBlock)
 
 	center := lipgloss.NewStyle().
 		Width(p.width / 3).
 		Render(p.progress.ViewAs(p.percent))
 
-	right := lipgloss.NewStyle().
-		Width(p.width / 3).
-		Align(lipgloss.Right).
-		Render("⏮    ⏭")
-
 	bar := lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		left,
 		center,
-		right,
 	)
+
+	borderColor := lipgloss.Color("#444444")
 
 	container := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
+		BorderForeground(borderColor).
+		Background(lipgloss.Color("#111111")).
 		Padding(0, 1)
 
 	return container.Render(

@@ -40,7 +40,7 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.width = msg.Width / 3
-		p.height = msg.Height - 8
+		p.height = msg.Height - 5 // 3 search + 5 player approx
 
 	case tea.KeyMsg:
 		if !p.focused {
@@ -48,20 +48,23 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 		}
 
 		switch msg.String() {
-		case "up", "k":
-			if p.selected > 0 {
-				p.selected--
-				if p.selected < p.scrollOffset {
-					p.scrollOffset = p.selected
-				}
-			}
-
 		case "down", "j":
 			if p.selected < len(p.items)-1 {
 				p.selected++
-				visibleLines := p.height - 4
-				if p.selected >= p.scrollOffset+visibleLines {
-					p.scrollOffset = p.selected - visibleLines + 1
+
+				// 🔥 scroll down when cursor passes viewport
+				if p.selected >= p.scrollOffset+p.visibleItems() {
+					p.scrollOffset++
+				}
+			}
+
+		case "up", "k":
+			if p.selected > 0 {
+				p.selected--
+
+				// 🔥 scroll up when cursor goes above viewport
+				if p.selected < p.scrollOffset {
+					p.scrollOffset--
 				}
 			}
 
@@ -77,7 +80,7 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 				}
 			}
 
-		case "enter":
+		case "l":
 			if len(p.items) > 0 {
 				selected := p.items[p.selected]
 				return p, func() tea.Msg {
@@ -95,44 +98,76 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 }
 
 func (p Playlist) View() string {
-	borderColor := lipgloss.Color("#555555")
+	borderColor := lipgloss.Color("#1a1a1a")
 	if p.focused {
-		borderColor = lipgloss.Color("#1DB954") // Spotify green when focused
+		borderColor = lipgloss.Color("#1DB954")
 	}
+
+	titleStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#1DB954")).
+		PaddingLeft(1)
+
+	selectedNameStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#1DB954")).
+		Bold(true)
+
+	normalNameStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#cccccc"))
+
+	selectedRowStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("#0d2b18")).
+		BorderLeft(true).
+		BorderForeground(lipgloss.Color("#1DB954")).
+		BorderStyle(lipgloss.ThickBorder()).
+		PaddingLeft(1)
+
+	normalRowStyle := lipgloss.NewStyle().
+		PaddingLeft(2)
 
 	style := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
-		Width(p.width).
-		Height(p.height)
+		Width(p.width - 2).
+		Height(p.height - 2)
 
 	if len(p.items) == 0 {
-		return style.Render("No playlists found")
+		empty := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#444444")).
+			PaddingLeft(1).
+			Render("no playlists found")
+		return style.Render(empty)
 	}
 
-	visibleLines := p.height - 4
-	if visibleLines < 1 {
-		visibleLines = 1 // this saves it but shows only 1 line
-	}
-
-	end := p.scrollOffset + visibleLines
+	start := p.scrollOffset
+	end := start + p.visibleItems()
 	if end > len(p.items) {
 		end = len(p.items)
 	}
 
 	var content string
-	for i := p.scrollOffset; i < end; i++ {
+	content += titleStyle.Render("Playlists") + "\n\n"
+
+	for i := start; i < end; i++ {
 		item := p.items[i]
-		line := item.Name
 		if i == p.selected {
-			line = "> " + line
+			line := "● " + selectedNameStyle.Render(item.Name)
+			content += selectedRowStyle.Render(line) + "\n"
 		} else {
-			line = "  " + line
+			line := "○ " + normalNameStyle.Render(item.Name)
+			content += normalRowStyle.Render(line) + "\n"
 		}
-		content += line + "\n"
 	}
 
 	return style.Render(content)
+}
+
+func (p Playlist) visibleItems() int {
+	items := (p.height - 6)
+	if items < 1 {
+		return 1
+	}
+	return items
 }
 
 func (p Playlist) SetPlaylists(data models.PlaylistResponse) Playlist {
