@@ -2,27 +2,36 @@ package ui
 
 import (
 	"github.com/abhinav0411/spctl/models"
-	"github.com/abhinav0411/spctl/spotify"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+)
+
+const (
+	PanelResult = iota
+	PanelPlaylist
 )
 
 type screen struct {
 	width  int
 	height int
 
-	player Player
-	search Search
-	result Playlist
+	player   Player
+	search   Search
+	result   Result
+	playlist Playlist
 
-	logo string
+	logo            string
+	playlistsLoaded bool
+	activePanel     int
 }
 
 func NewScreen() *screen {
-	return &screen{
-		player: NewPlayer(),
-		search: NewSearch(),
-		result: NewPlaylist(),
+	s := &screen{
+		player:      NewPlayer(),
+		search:      NewSearch(),
+		result:      NewResult(),
+		playlist:    NewPlaylist(),
+		activePanel: PanelResult,
 		logo: `
                              █████    ████ 
                             ░░███    ░░███ 
@@ -36,6 +45,22 @@ func NewScreen() *screen {
          █████                             
         ░░░░░                              
 `,
+	}
+	// Result panel is focused by default
+	s.result.focused = true
+	return s
+}
+
+func (s *screen) cycleFocus() {
+	// Only cycle between result and playlist (not search — search has its own toggle)
+	if s.activePanel == PanelResult {
+		s.activePanel = PanelPlaylist
+		s.result.focused = false
+		s.playlist.focused = true
+	} else {
+		s.activePanel = PanelResult
+		s.result.focused = true
+		s.playlist.focused = false
 	}
 }
 
@@ -54,28 +79,107 @@ func (s *screen) ScreenUpdate(
 		s.width = msg.Width
 		s.height = msg.Height
 
-	case models.SearchResult:
-		// update results (no printing!)
-		s.result = s.result.SetResults(msg)
+		if !s.playlistsLoaded {
+			cmds = append(cmds, fetchPlaylistsCmd(&client))
+			s.playlistsLoaded = true
+		}
 
+	case tea.KeyMsg:
+		// Tab switches focus between the two panels (only when search is not active)
+		if msg.String() == "tab" && !s.search.focused {
+			s.cycleFocus()
+			return tea.Batch(cmds...)
+		}
+
+	// 🔍 SEARCH RESULTS
+	case models.SearchResult:
+		s.result = s.result.SetResults(msg)
+		// Switch focus to result panel so the user can navigate search results
+		s.activePanel = PanelResult
+		s.result.focused = true
+		s.playlist.focused = false
+
+	// 🎧 PLAYLIST LIST
+	case models.PlaylistResponse:
+		s.playlist = s.playlist.SetPlaylists(msg)
+
+	// 🎵 PLAYLIST TRACKS → reuse result panel
+	case models.PlaylistTracksResponse:
+		var items []TrackItem
+		for _, item := range msg.Items {
+			track := item.Track
+			if track == nil {
+				track = item.Item
+			}
+			if track == nil || track.Name == "" {
+				continue
+			}
+			artist := ""
+			if len(track.Artists) > 0 {
+				artist = track.Artists[0].Name
+			}
+			items = append(items, TrackItem{
+				Title:  track.Name,
+				Artist: artist,
+				URI:    track.URI,
+			})
+		}
+
+		s.result.items = items
+		s.result.selected = 0
+		s.result.scrollOffset = 0
+		// Switch focus to result panel so the user can browse the loaded tracks
+		s.activePanel = PanelResult
+		s.result.focused = true
+		s.playlist.focused = false
+
+	// ▶️ PLAY SONG
 	case PlaySongMsg:
 		cmds = append(cmds, playSongCmd(client, msg.URI, device.ID))
 
+	case SelectPlaylistMsg:
+		if msg.Play {
+			cmds = append(cmds, playPlaylistCmd(client, msg.URI, device.ID))
+			cmds = append(cmds, fetchPlaylistTracksCmd(&client, msg.ID))
+		} else {
+			cmds = append(cmds, fetchPlaylistTracksCmd(&client, msg.ID))
+		}
+
+	// 🔍 SEARCH QUERY
 	case SearchQueryMsg:
 		cmds = append(cmds, searchCmd(&client, msg.Query))
 	}
 
 	// --- SEARCH ---
-	var searchUpdateCmd tea.Cmd
-	s.search, searchUpdateCmd = s.search.Update(msg)
-	cmds = append(cmds, searchUpdateCmd)
+	var searchCmd tea.Cmd
+	s.search, searchCmd = s.search.Update(msg)
+	cmds = append(cmds, searchCmd)
 
-	// --- PLAYLIST ---
-	var playlistCmd tea.Cmd
-	if s.search.focused {
-		s.result, playlistCmd = s.result.Update(nil)
+	// --- RESULT (LEFT PANEL) ---
+	// Block input to result when search bar is focused
+	// --- RESULT (LEFT PANEL) ---
+	var resultCmd tea.Cmd
+	if s.search.focused || s.activePanel != PanelResult {
+		if _, ok := msg.(tea.WindowSizeMsg); ok {
+			s.result, resultCmd = s.result.Update(msg) // always pass size
+		} else {
+			s.result, resultCmd = s.result.Update(nil)
+		}
 	} else {
-		s.result, playlistCmd = s.result.Update(msg)
+		s.result, resultCmd = s.result.Update(msg)
+	}
+	cmds = append(cmds, resultCmd)
+
+	// --- PLAYLIST (RIGHT PANEL) ---
+	var playlistCmd tea.Cmd
+	if s.search.focused || s.activePanel != PanelPlaylist {
+		if _, ok := msg.(tea.WindowSizeMsg); ok {
+			s.playlist, playlistCmd = s.playlist.Update(msg) // always pass size
+		} else {
+			s.playlist, playlistCmd = s.playlist.Update(nil)
+		}
+	} else {
+		s.playlist, playlistCmd = s.playlist.Update(msg)
 	}
 	cmds = append(cmds, playlistCmd)
 
@@ -84,21 +188,26 @@ func (s *screen) ScreenUpdate(
 
 	var playerCmd tea.Cmd
 
-	if s.search.focused {
-		s.player, playerCmd = s.player.Update(nil, &client, device.ID)
-
-	} else if key, ok := msg.(tea.KeyMsg); ok {
-
-		switch key.String() {
-		case "up", "down", "j", "k", "enter":
-			// playlist owns these
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if s.search.focused {
+			// Search is typing — block player navigation
 			s.player, playerCmd = s.player.Update(nil, &client, device.ID)
 
-		default:
+		} else if s.result.focused || s.playlist.focused {
+			// A panel is active — block up/down/enter from reaching player
+			switch msg.String() {
+			case "up", "down", "j", "k", "enter":
+				s.player, playerCmd = s.player.Update(nil, &client, device.ID)
+			default:
+				s.player, playerCmd = s.player.Update(msg, &client, device.ID)
+			}
+
+		} else {
 			s.player, playerCmd = s.player.Update(msg, &client, device.ID)
 		}
 
-	} else {
+	default:
 		s.player, playerCmd = s.player.Update(msg, &client, device.ID)
 	}
 
@@ -112,22 +221,46 @@ func (s *screen) ScreenView() string {
 		return "Initializing..."
 	}
 
+	// heights
+	searchHeight := lipgloss.Height(s.search.View())
+	playerHeight := lipgloss.Height(s.player.View())
+	middleHeight := s.height - searchHeight - playerHeight
+
 	// --- TOP ---
-	top := s.search.View()
+	top := lipgloss.NewStyle().
+		Width(s.width).
+		Render(s.search.View())
 
-	// --- LEFT ---
-	left := s.result.View()
+	// --- CENTER LOGO + KEYBINDS ---
+	logoStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#1DB954")).
+		Bold(true).
+		Align(lipgloss.Center)
 
-	// --- CENTER ---
+	keyStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#444444"))
+
+	accentKey := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#666666")).
+		Bold(true)
+
+	keybinds := "\n\n" +
+		accentKey.Render("enter") + keyStyle.Render("  play track") + "\n" +
+		accentKey.Render("v    ") + keyStyle.Render("  view playlist") + "\n" +
+		accentKey.Render("p    ") + keyStyle.Render("  play playlist") + "\n" +
+		accentKey.Render("tab  ") + keyStyle.Render("  switch panel") + "\n" +
+		accentKey.Render("space") + keyStyle.Render("  pause/resume") + "\n" +
+		accentKey.Render("n / b") + keyStyle.Render("  next/prev")
+
 	center := lipgloss.NewStyle().
 		Width(s.width/3).
+		Height(middleHeight).
 		Align(lipgloss.Center, lipgloss.Center).
-		Render(s.logo)
+		Render(logoStyle.Render(s.logo) + keybinds)
 
-	// --- RIGHT ---
-	right := lipgloss.NewStyle().
-		Width(s.width / 3).
-		Render("")
+	// --- MIDDLE ---
+	left := s.result.View()
+	right := s.playlist.View()
 
 	middle := lipgloss.JoinHorizontal(
 		lipgloss.Top,
@@ -137,7 +270,9 @@ func (s *screen) ScreenView() string {
 	)
 
 	// --- BOTTOM ---
-	bottom := s.player.View()
+	bottom := lipgloss.NewStyle().
+		Width(s.width).
+		Render(s.player.View())
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
@@ -145,25 +280,4 @@ func (s *screen) ScreenView() string {
 		middle,
 		bottom,
 	)
-}
-
-// --- COMMANDS ---
-
-func playSongCmd(client models.Client, uri string, deviceID string) tea.Cmd {
-	return func() tea.Msg {
-
-		body := map[string]interface{}{
-			"uris": []string{uri},
-		}
-
-		spotify.Start(&client, body, deviceID)
-
-		return nil
-	}
-}
-
-func searchCmd(client *models.Client, query string) tea.Cmd {
-	return func() tea.Msg {
-		return spotify.Search(client, query)
-	}
 }

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"github.com/abhinav0411/spctl/models"
+	"github.com/abhinav0411/spctl/spotify"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -95,4 +97,10 @@ func (s Search) View() string {
 // helper
 func (s Search) Value() string {
 	return s.input.Value()
+}
+
+func searchCmd(client *models.Client, query string) tea.Cmd {
+	return func() tea.Msg {
+		return spotify.Search(client, query)
+	}
 }
