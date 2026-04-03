@@ -80,7 +80,7 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 				}
 			}
 
-		case "l":
+		case "p":
 			if len(p.items) > 0 {
 				selected := p.items[p.selected]
 				return p, func() tea.Msg {

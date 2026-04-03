@@ -65,7 +65,7 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 				}
 			}
 
-		case "enter":
+		case "p":
 			if len(p.items) > 0 {
 				selected := p.items[p.selected]
 				return p, func() tea.Msg {

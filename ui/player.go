@@ -22,7 +22,7 @@ type Player struct {
 	delta     float64
 
 	trackName  string
-	artishName string
+	artistName string
 }
 
 // --- INIT ---
@@ -72,7 +72,7 @@ func (p Player) Update(msg tea.Msg, client *models.Client, id string) (Player, t
 		case "n":
 			return p, nextCmd(client, id)
 
-		case "p":
+		case "b":
 			return p, prevCmd(client, id)
 		}
 
@@ -92,21 +92,21 @@ func (p Player) Update(msg tea.Msg, client *models.Client, id string) (Player, t
 // --- SET SONG FROM BACKEND ---
 
 func (p Player) SetSong(song models.CurrentSong) Player {
+	// ignore empty responses
+	if song.Item.Name == "" {
+		return p
+	}
 	p.trackName = song.Item.Name
 	p.isPlaying = song.IsPlaying
 	if len(song.Item.Artists) > 0 {
-		p.artishName = song.Item.Artists[0].Name
+		p.artistName = song.Item.Artists[0].Name
 	} else {
-		p.artishName = "Unknown Artist"
+		p.artistName = "unknown artist"
 	}
-
 	if song.Item.DurationMs > 0 {
 		p.percent = float64(song.ProgressMs) / float64(song.Item.DurationMs)
-
-		// increment per second
 		p.delta = 1.0 / (float64(song.Item.DurationMs) / 1000.0)
 	}
-
 	return p
 }
 
@@ -128,7 +128,7 @@ func (p Player) View() string {
 		Italic(true)
 
 	track := trackStyle.Render(p.trackName)
-	artist := artistStyle.Render(p.artishName)
+	artist := artistStyle.Render(p.artistName)
 
 	trackBlock := track + "\n" + artist
 

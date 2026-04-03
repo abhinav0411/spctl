@@ -85,19 +85,25 @@ func (s *screen) ScreenUpdate(
 		}
 
 	case tea.KeyMsg:
-		// Tab switches focus between the two panels (only when search is not active)
 		if msg.String() == "tab" && !s.search.focused {
 			s.cycleFocus()
+			return tea.Batch(cmds...)
+		}
+		// add this — if / is pressed, let search handle it exclusively
+		if msg.String() == "/" && !s.search.focused {
+			s.search, _ = s.search.Update(msg)
 			return tea.Batch(cmds...)
 		}
 
 	// 🔍 SEARCH RESULTS
 	case models.SearchResult:
 		s.result = s.result.SetResults(msg)
-		// Switch focus to result panel so the user can navigate search results
 		s.activePanel = PanelResult
 		s.result.focused = true
 		s.playlist.focused = false
+		// also clear any playlist view state
+		s.result.scrollOffset = 0
+		s.result.selected = 0
 
 	// 🎧 PLAYLIST LIST
 	case models.PlaylistResponse:
@@ -161,7 +167,9 @@ func (s *screen) ScreenUpdate(
 	var resultCmd tea.Cmd
 	if s.search.focused || s.activePanel != PanelResult {
 		if _, ok := msg.(tea.WindowSizeMsg); ok {
-			s.result, resultCmd = s.result.Update(msg) // always pass size
+			s.result, resultCmd = s.result.Update(msg)
+		} else if _, ok := msg.(models.SearchResult); ok {
+			s.result, resultCmd = s.result.Update(msg) // always pass search results
 		} else {
 			s.result, resultCmd = s.result.Update(nil)
 		}
@@ -195,14 +203,12 @@ func (s *screen) ScreenUpdate(
 			s.player, playerCmd = s.player.Update(nil, &client, device.ID)
 
 		} else if s.result.focused || s.playlist.focused {
-			// A panel is active — block up/down/enter from reaching player
 			switch msg.String() {
 			case "up", "down", "j", "k", "enter":
 				s.player, playerCmd = s.player.Update(nil, &client, device.ID)
 			default:
 				s.player, playerCmd = s.player.Update(msg, &client, device.ID)
 			}
-
 		} else {
 			s.player, playerCmd = s.player.Update(msg, &client, device.ID)
 		}

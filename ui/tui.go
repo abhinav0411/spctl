@@ -85,7 +85,6 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		if msg.String() == "q" {
 			return m, tea.Quit
@@ -93,14 +92,13 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case models.CurrentSong:
 		m.currentSong = msg
-		if m.client != nil {
-			cmds = append(cmds, refreshSongCmd(m.client))
-		}
+		return m, nil // ← add this, don't pass song msg down to screen
 
 	case []models.PlayerDevice:
 		if len(msg) > 0 {
 			m.device = msg[0]
 		}
+		return m, nil // ← same here
 
 	case slowTickMsg:
 		if m.loggedIn && m.client != nil {
@@ -110,27 +108,23 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 		cmds = append(cmds, slowTickCmd())
+		return m, tea.Batch(cmds...) // ← return early, don't pass tick down
 	}
 
+	// only keypresses and window/other msgs reach the screen
 	switch m.currentScreen {
-
 	case "login":
 		m.client, m.loggedIn = m.loginModel.LoginUpdate(msg)
-
 		if m.loggedIn {
 			m.currentScreen = "screen"
-
 			if m.client != nil {
 				m.device = fetchDeviceCmd(m.client)
-
 				cmds = append(cmds,
-					refreshSongCmd(m.client),
 					PlayerTickCmd(),
 					slowTickCmd(),
 				)
 			}
 		}
-
 	case "screen":
 		if m.client != nil {
 			cmd := m.screenModel.ScreenUpdate(
