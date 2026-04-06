@@ -40,7 +40,7 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.width = msg.Width / 3
-		p.height = msg.Height - 5 // 3 search + 5 player approx
+		p.height = msg.Height - 5
 
 	case tea.KeyMsg:
 		if !p.focused {
@@ -52,7 +52,6 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 			if p.selected < len(p.items)-1 {
 				p.selected++
 
-				// 🔥 scroll down when cursor passes viewport
 				if p.selected >= p.scrollOffset+p.visibleItems() {
 					p.scrollOffset++
 				}
@@ -62,7 +61,6 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 			if p.selected > 0 {
 				p.selected--
 
-				// 🔥 scroll up when cursor goes above viewport
 				if p.selected < p.scrollOffset {
 					p.scrollOffset--
 				}
@@ -75,7 +73,7 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 					return SelectPlaylistMsg{
 						ID:   selected.ID,
 						URI:  selected.URI,
-						Play: false, // view tracks
+						Play: false,
 					}
 				}
 			}
@@ -87,7 +85,7 @@ func (p Playlist) Update(msg tea.Msg) (Playlist, tea.Cmd) {
 					return SelectPlaylistMsg{
 						ID:   selected.ID,
 						URI:  selected.URI,
-						Play: true, // play directly
+						Play: true,
 					}
 				}
 			}

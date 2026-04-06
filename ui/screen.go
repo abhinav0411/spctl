@@ -46,13 +46,11 @@ func NewScreen() *screen {
         ░░░░░                              
 `,
 	}
-	// Result panel is focused by default
 	s.result.focused = true
 	return s
 }
 
 func (s *screen) cycleFocus() {
-	// Only cycle between result and playlist (not search — search has its own toggle)
 	if s.activePanel == PanelResult {
 		s.activePanel = PanelPlaylist
 		s.result.focused = false
@@ -89,27 +87,22 @@ func (s *screen) ScreenUpdate(
 			s.cycleFocus()
 			return tea.Batch(cmds...)
 		}
-		// add this — if / is pressed, let search handle it exclusively
 		if msg.String() == "/" && !s.search.focused {
 			s.search, _ = s.search.Update(msg)
 			return tea.Batch(cmds...)
 		}
 
-	// 🔍 SEARCH RESULTS
 	case models.SearchResult:
 		s.result = s.result.SetResults(msg)
 		s.activePanel = PanelResult
 		s.result.focused = true
 		s.playlist.focused = false
-		// also clear any playlist view state
 		s.result.scrollOffset = 0
 		s.result.selected = 0
 
-	// 🎧 PLAYLIST LIST
 	case models.PlaylistResponse:
 		s.playlist = s.playlist.SetPlaylists(msg)
 
-	// 🎵 PLAYLIST TRACKS → reuse result panel
 	case models.PlaylistTracksResponse:
 		var items []TrackItem
 		for _, item := range msg.Items {
@@ -134,12 +127,10 @@ func (s *screen) ScreenUpdate(
 		s.result.items = items
 		s.result.selected = 0
 		s.result.scrollOffset = 0
-		// Switch focus to result panel so the user can browse the loaded tracks
 		s.activePanel = PanelResult
 		s.result.focused = true
 		s.playlist.focused = false
 
-	// ▶️ PLAY SONG
 	case PlaySongMsg:
 		cmds = append(cmds, playSongCmd(client, msg.URI, device.ID))
 
@@ -151,25 +142,20 @@ func (s *screen) ScreenUpdate(
 			cmds = append(cmds, fetchPlaylistTracksCmd(&client, msg.ID))
 		}
 
-	// 🔍 SEARCH QUERY
 	case SearchQueryMsg:
 		cmds = append(cmds, searchCmd(&client, msg.Query))
 	}
 
-	// --- SEARCH ---
 	var searchCmd tea.Cmd
 	s.search, searchCmd = s.search.Update(msg)
 	cmds = append(cmds, searchCmd)
 
-	// --- RESULT (LEFT PANEL) ---
-	// Block input to result when search bar is focused
-	// --- RESULT (LEFT PANEL) ---
 	var resultCmd tea.Cmd
 	if s.search.focused || s.activePanel != PanelResult {
 		if _, ok := msg.(tea.WindowSizeMsg); ok {
 			s.result, resultCmd = s.result.Update(msg)
 		} else if _, ok := msg.(models.SearchResult); ok {
-			s.result, resultCmd = s.result.Update(msg) // always pass search results
+			s.result, resultCmd = s.result.Update(msg)
 		} else {
 			s.result, resultCmd = s.result.Update(nil)
 		}
@@ -178,11 +164,10 @@ func (s *screen) ScreenUpdate(
 	}
 	cmds = append(cmds, resultCmd)
 
-	// --- PLAYLIST (RIGHT PANEL) ---
 	var playlistCmd tea.Cmd
 	if s.search.focused || s.activePanel != PanelPlaylist {
 		if _, ok := msg.(tea.WindowSizeMsg); ok {
-			s.playlist, playlistCmd = s.playlist.Update(msg) // always pass size
+			s.playlist, playlistCmd = s.playlist.Update(msg)
 		} else {
 			s.playlist, playlistCmd = s.playlist.Update(nil)
 		}
@@ -191,7 +176,6 @@ func (s *screen) ScreenUpdate(
 	}
 	cmds = append(cmds, playlistCmd)
 
-	// --- PLAYER ---
 	s.player = s.player.SetSong(song)
 
 	var playerCmd tea.Cmd
@@ -199,7 +183,6 @@ func (s *screen) ScreenUpdate(
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if s.search.focused {
-			// Search is typing — block player navigation
 			s.player, playerCmd = s.player.Update(nil, &client, device.ID)
 
 		} else if s.result.focused || s.playlist.focused {
@@ -227,17 +210,14 @@ func (s *screen) ScreenView() string {
 		return "Initializing..."
 	}
 
-	// heights
 	searchHeight := lipgloss.Height(s.search.View())
 	playerHeight := lipgloss.Height(s.player.View())
 	middleHeight := s.height - searchHeight - playerHeight
 
-	// --- TOP ---
 	top := lipgloss.NewStyle().
 		Width(s.width).
 		Render(s.search.View())
 
-	// --- CENTER LOGO + KEYBINDS ---
 	logoStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#1DB954")).
 		Bold(true).
@@ -264,7 +244,6 @@ func (s *screen) ScreenView() string {
 		Align(lipgloss.Center, lipgloss.Center).
 		Render(logoStyle.Render(s.logo) + keybinds)
 
-	// --- MIDDLE ---
 	left := s.result.View()
 	right := s.playlist.View()
 
@@ -275,7 +254,6 @@ func (s *screen) ScreenView() string {
 		right,
 	)
 
-	// --- BOTTOM ---
 	bottom := lipgloss.NewStyle().
 		Width(s.width).
 		Render(s.player.View())

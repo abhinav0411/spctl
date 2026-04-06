@@ -21,8 +21,6 @@ type spctl struct {
 	device      models.PlayerDevice
 }
 
-// --- COMMANDS ---
-
 func refreshSongCmd(client *models.Client) tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 		return spotify.GetCurrentSong(client)
@@ -53,7 +51,6 @@ func fetchSongCmd(client *models.Client) tea.Cmd {
 	}
 }
 
-// 🔥 slow tick
 type slowTickMsg struct{}
 
 func slowTickCmd() tea.Cmd {
@@ -61,8 +58,6 @@ func slowTickCmd() tea.Cmd {
 		return slowTickMsg{}
 	})
 }
-
-// --- INITIAL MODEL ---
 
 func initialModel() spctl {
 	return spctl{
@@ -73,13 +68,9 @@ func initialModel() spctl {
 	}
 }
 
-// --- INIT ---
-
 func (m spctl) Init() tea.Cmd {
 	return slowTickCmd()
 }
-
-// --- UPDATE ---
 
 func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
@@ -92,13 +83,13 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case models.CurrentSong:
 		m.currentSong = msg
-		return m, nil // ← add this, don't pass song msg down to screen
+		return m, nil
 
 	case []models.PlayerDevice:
 		if len(msg) > 0 {
 			m.device = msg[0]
 		}
-		return m, nil // ← same here
+		return m, nil
 
 	case slowTickMsg:
 		if m.loggedIn && m.client != nil {
@@ -108,10 +99,9 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			)
 		}
 		cmds = append(cmds, slowTickCmd())
-		return m, tea.Batch(cmds...) // ← return early, don't pass tick down
+		return m, tea.Batch(cmds...)
 	}
 
-	// only keypresses and window/other msgs reach the screen
 	switch m.currentScreen {
 	case "login":
 		m.client, m.loggedIn = m.loginModel.LoginUpdate(msg)
@@ -142,8 +132,6 @@ func (m spctl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// --- VIEW ---
-
 func (m spctl) View() string {
 	switch m.currentScreen {
 	case "login":
@@ -153,8 +141,6 @@ func (m spctl) View() string {
 	}
 	return ""
 }
-
-// --- START ---
 
 func Start() {
 	p := tea.NewProgram(initialModel(), tea.WithAltScreen())

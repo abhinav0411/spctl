@@ -59,7 +59,7 @@ func (s Search) Update(msg tea.Msg) (Search, tea.Cmd) {
 				query := s.input.Value()
 				s.focused = false
 				s.input.Blur()
-				s.input.SetValue("") // clear after search
+				s.input.SetValue("")
 				return s, func() tea.Msg {
 					return SearchQueryMsg{Query: query}
 				}

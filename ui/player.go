@@ -25,8 +25,6 @@ type Player struct {
 	artistName string
 }
 
-// --- INIT ---
-
 func NewPlayer() Player {
 	prog := progress.New(
 		progress.WithGradient("#0d9488", "#0a0a0a"),
@@ -42,8 +40,6 @@ func NewPlayer() Player {
 func (p Player) Init() tea.Cmd {
 	return tickCmd()
 }
-
-// --- UPDATE ---
 
 func (p Player) Update(msg tea.Msg, client *models.Client, id string) (Player, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -89,10 +85,7 @@ func (p Player) Update(msg tea.Msg, client *models.Client, id string) (Player, t
 	return p, nil
 }
 
-// --- SET SONG FROM BACKEND ---
-
 func (p Player) SetSong(song models.CurrentSong) Player {
-	// ignore empty responses
 	if song.Item.Name == "" {
 		return p
 	}
@@ -110,14 +103,11 @@ func (p Player) SetSong(song models.CurrentSong) Player {
 	return p
 }
 
-// --- VIEW ---
-
 func (p Player) View() string {
 	if p.width == 0 {
 		return ""
 	}
 
-	// 🎵 Track name (primary)
 	trackStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#4fcac0")).
 		Bold(true).
@@ -160,8 +150,6 @@ func (p Player) View() string {
 			Render(bar),
 	)
 }
-
-// --- TICK LOOP ---
 
 func tickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg {

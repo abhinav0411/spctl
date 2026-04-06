@@ -36,10 +36,9 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		p.width = msg.Width / 3
-		p.height = msg.Height - 5 // 3 search + 5 player approx
+		p.height = msg.Height - 5
 
 	case tea.KeyMsg:
-		// Only handle navigation keys if this panel is focused
 		if !p.focused {
 			return p, nil
 		}
@@ -49,7 +48,6 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 			if p.selected < len(p.items)-1 {
 				p.selected++
 
-				// 🔥 scroll down when cursor passes viewport
 				if p.selected >= p.scrollOffset+p.visibleItems() {
 					p.scrollOffset++
 				}
@@ -59,7 +57,6 @@ func (p Result) Update(msg tea.Msg) (Result, tea.Cmd) {
 			if p.selected > 0 {
 				p.selected--
 
-				// 🔥 scroll up when cursor goes above viewport
 				if p.selected < p.scrollOffset {
 					p.scrollOffset--
 				}
@@ -168,7 +165,7 @@ func (p Result) SetResults(search models.SearchResult) Result {
 }
 
 func (p Result) visibleItems() int {
-	items := (p.height - 4) / 3 // 3 lines per item (title + artist + spacing)
+	items := (p.height - 4) / 3
 	if items < 1 {
 		return 1
 	}
