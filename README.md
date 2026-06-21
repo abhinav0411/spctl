@@ -13,11 +13,6 @@ A terminal-based Spotify client built with Go, Bubbletea, and Lipgloss.
 - Player controls — pause, resume, skip next/prev
 - Keyboard-driven navigation
 
-## Prerequisites
-
-- Go 1.21+
-- A Spotify Premium account
-- A registered Spotify app (for API credentials)
 
 ## Setup
 
